@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>Lambda data fetch</h1>
+
+<h4>Fetch Id: <span id="id"></span></h4>
+<h4>Fetched data: <span id="fetched_data"></span></h4>
+
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.6.min.js"></script>
+<script type="text/javascript">
+AWS.config.region = 'us-east-1';
+AWS.config.update({
+	accessKeyId: '',
+	secretAccessKey: ''
+});
+
+var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
+var lambda = new AWS.Lambda({apiVersion: '2014-11-11'});
+
+var LambdaDataFetcher = {
+	fetchTimeout: 10,
+	fetchData: function (fetchId, userId, callback) {
+		if (!fetchId || !userId) {
+			callback("", {"msg":"Invalid params"});
+			return;
+		}
+
+		var queueUrl = LambdaDataFetcher._getQueueUrl(userId);
+		var timeout = LambdaDataFetcher.fetchTimeout;
+
+		// TODO nonce should be more unique to avoid collision.
+		var nonce = Math.floor(Math.random()*1000000 + 1);
+
+		// get queue (start before lambda, and be waiting)
+		var receiveParams = {
+			QueueUrl: queueUrl,
+			WaitTimeSeconds: timeout
+		};
+		console.log("requesting queue: "+receiveParams.QueueUrl);
+		sqs.receiveMessage(receiveParams, function (err, data) {
+			console.log("received message");
+			if (data.Messages) {
+				var handle = data.Messages[0].ReceiptHandle;
+				var payload = JSON.parse(data.Messages[0].Body);
+				// check if this is the data we requested, by matching nonce
+				if (payload.nonce != nonce) {
+					// TODO should be a better error object.
+					callback("", {"msg": "Wrong object: nonce does not match: "+payload.nonce});
+					return;
+				}
+
+				// complete. return payload data
+				console.log("good! returning data");
+				console.log(payload.data);
+				callback(payload.data, null);
+
+				// delete finished queue
+				sqs.deleteMessage({
+					'QueueUrl': queueUrl,
+					'ReceiptHandle': handle
+				}, function(){});
+			} else {
+				callback("", err);
+			}
+		});
+
+		// invoke lambda fetch request
+		var _event = {
+			"fetch_id": fetchId,
+			"sqs_queue_url": queueUrl,
+			"nonce": nonce
+		};
+		console.log("fetch id: "+_event.fetch_id);
+		lambda.invokeAsync({
+			FunctionName: "test-dataFetcher",
+			InvokeArgs: JSON.stringify(_event)
+		}, function(err,data) {
+			console.log(data);
+		});
+	},
+	_getQueueUrl: function (userId) {
+		return "https://sqs.us-east-1.amazonaws.com/225011719747/user-queue-"+userId;
+	}
+};
+
+// data fetch
+var fetchId = 23;
+var userId = 100;
+document.getElementById("id").innerHTML = fetchId;
+LambdaDataFetcher.fetchData(fetchId, userId, function(data, err){
+	if (err != null) {
+		console.log(err);
+		document.getElementById("fetched_data").innerHTML = "*ERROR*";
+		return;
+	}
+
+	document.getElementById("fetched_data").innerHTML = data.date+" , "+data.text;
+});
+</script>
+</body>
+</html>
+
+
