@@ -16,13 +16,6 @@ Being able to fetch data just with Lambda & SQS means that entire application ba
 This proof-of-concept only uses `fetch_id` as a primary key to retrieve data, but this idea can be extended to executing more complex queries, or even passing raw SQL queries over Lambda into RDS.  
 
 
-
-### Implications
-Being able to fetch data just with Lambda & SQS means that entire application backends can be made just with this technology and a database; Without managing any EC2 instances (a 2-Tier architecture, in AWS terms).  
-
-This proof-of-concept only uses `fetch_id` as a primary key to retrieve data, but this idea can be extended to executing more complex queries, or even passing raw SQL queries over Lambda into RDS.  
-
-
 ### Limitations
 Since this fetching goes through multiple HTTP request, the response time is not optimal (3~5 seconds on my environment). 
 
