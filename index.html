@@ -3,6 +3,9 @@
 <body>
 
 <h1>Lambda data fetch</h1>
+<p>
+Please read README.md to understand the correct setup, and what I am doing here.
+</p>
 
 <h4>Fetch Id: <span id="id"></span></h4>
 <h4>Fetched data: <span id="fetched_data"></span></h4>
@@ -19,6 +22,7 @@ var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
 var lambda = new AWS.Lambda({apiVersion: '2014-11-11'});
 
 var LambdaDataFetcher = {
+	queueUrlPrefix: "https://{YOUR_SQS_ENDPOINT}/user-queue-",
 	fetchTimeout: 10,
 	fetchData: function (fetchId, userId, callback) {
 		if (!fetchId || !userId) {
@@ -80,7 +84,7 @@ var LambdaDataFetcher = {
 		});
 	},
 	_getQueueUrl: function (userId) {
-		return "https://sqs.us-east-1.amazonaws.com/225011719747/user-queue-"+userId;
+		return LambdaDataFetcher.queueUrlPrefix + userId;
 	}
 };
 
