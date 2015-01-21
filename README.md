@@ -7,7 +7,17 @@ Since Amazon Lambda does not have a way to return data after invokation, it seem
 But I thought that if I use it together with SQS long-polling, it may be possible to implement an asynchronous request to get data, using only Amazon' managed services. So this is a proof-of-concept showing how that can be done.  
 
 
-### What it's Doing 
+### Implications
+Being able to fetch data just with Lambda & SQS means that entire application backends can be made just with this technology and a database; Without managing any EC2 instances (a 2-Tier architecture, in AWS terms).  
+
+This proof-of-concept only uses `fetch_id` as a primary key to retrieve data, but this idea can be extended to executing more complex queries, or even passing raw SQL queries over Lambda into RDS.  
+
+
+### Limitations
+Since this fetching goes through multiple HTTP request, the response time is not optimal (3~5 seconds on my environment). 
+
+
+### How it Works
 0. Set up:
   1. Create a SQS queue with the name "user-queue-{user_id}", where {user_id} will be the unique ID of the user who will retrieve data.  
     (In a real life setting, each users' SQS should be automatically created upon the creation of that user.)
@@ -38,16 +48,6 @@ But I thought that if I use it together with SQS long-polling, it may be possibl
 7. If the `nonce` matches, the data is considered valid, is returned to the `callback` function of `fetchData()`. 
 
 8. Finally it will call `sqs.deleteMessage()` to delete the message it successfully received. 
-
-
-### Implications
-Being able to fetch data just with Lambda & SQS means that entire application backends can be made just with this technology and a database; Without managing any EC2 instances (a 2-Tier architecture, in AWS terms).  
-
-This proof-of-concept only uses `fetch_id` as a primary key to retrieve data, but this idea can be extended to executing more complex queries, or even passing raw SQL queries over Lambda into RDS.  
-
-
-### Limitations
-Since this fetching goes through multiple HTTP request, the response time is not optimal (3~5 seconds on my environment). 
 
 
 
